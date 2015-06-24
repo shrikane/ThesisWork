@@ -9,7 +9,11 @@ public class TokenNGramAnalyzer extends Analyzer {
 		// TODO Auto-generated constructor stub
 	}
 
-	private String getList(int startIndex, int endIndex, String[] input) {
+	public TokenNGramAnalyzer(int size) {
+		tokenSize = size ;
+	}
+
+	private String getToken(int startIndex, int endIndex, String[] input) {
 		StringBuffer bf = new StringBuffer();
 		for (int i = startIndex; i < endIndex; i++)
 			bf.append(input[i]);
@@ -29,7 +33,7 @@ public class TokenNGramAnalyzer extends Analyzer {
 		String[] tokens = text.split("(?=[\\s+;])");
 		int maxStartIndex = tokens.length - tokenSize + 1;
 		for (int i = 0; i < maxStartIndex; i++)
-			nGramTokens.add(getList(i, i + tokenSize, tokens));
+			nGramTokens.add(getToken(i, i + tokenSize, tokens));
 		return nGramTokens;
 	}
 
