@@ -11,8 +11,6 @@ import java.util.Map.Entry;
 import java.util.Random;
 import java.util.Set;
 
-import javax.print.Doc;
-
 import edu.umbc.cs.analysis.Analyzer;
 import edu.umbc.cs.analysis.CharNGramAnalyzer;
 import edu.umbc.cs.analysis.TokenNGramAnalyzer;
@@ -27,23 +25,6 @@ import edu.umbc.cs.similarity.MinMax;
 import edu.umbc.cs.similarity.klDivergence;
 import edu.umbc.cs.utils.AuthorIDMapping;
 import edu.umbc.cs.utils.Document;
-
-
-
-class Author{
-	double precision;
-	double recall;
-	double accuracy;
-	double fmeasure;
-	
-	@Override
-	public String toString() {
-		return precision+","+recall+","+accuracy+"fmeasure";
-	}
-	
-}
-
-
 
 public class IndexBuilder {
 
@@ -147,17 +128,10 @@ fw = new FileWriter(FIlePath);
 
 	}
 
-	
-	
-	
-	
-	
-	
-	
-	public List<Author> buildIndex(List<Document> corpus,ScoringSchema score, Analyzer analyzer,
-		ISimilarity similarityMeasure) throws IOException {
-	
-		List<Author> result = new ArrayList<Author>();
+	public double buildIndex(List<Document> corpus,ScoringSchema score, Analyzer analyzer,
+			ISimilarity similarityMeasure) throws IOException {
+		
+
 
 		List<Document> train = new ArrayList<Document>();
 		List<Document> test = new ArrayList<Document>();
@@ -168,72 +142,31 @@ fw = new FileWriter(FIlePath);
 			terms.clear();
 			document.setScoredTerms(terms);
 		}
-
+		
+		
+		
+		
 		profile = buildProfile(train,score);
-		int[][] results = new int [profile.size()][profile.size()];
+
 		int correct = 0;
 		int tot = 0;
 		for (Document document : test) {
 			int authId = similarityMeasure.getAuthId(profile, document);
-			document.setPredictedId(authId);
 			tot++;
 			// System.out.println("Expeted: "+document.getAuthorId()+" Actual: "+authId+" FileName: "+document.getDocName());
 			if (authId == document.getAuthorId())
-				correct++;		
-			results[document.getAuthorId()][authId] += 1;
+				correct++;
 		}
-		
-		
-	
-
-		double truePositive=0;
-		double falsePositive=0;
-		double falseNegative=0;
-		double trueNegative=0;
-		
-		System.out.println(profile.size());
-		for(int i=0;i<profile.size();i++){
-			Author a = new Author();
-			truePositive = results[i][i];
-			int [] fn = results[i];
-			for(int j=0;j<fn.length;j++){
-				if(j != i){
-					falseNegative += fn[j];
-				}
-			}
-			
-			
-			for(int j=0;j<fn.length;j++){
-				if(j != i){
-				falsePositive += results[j][i];
-				}
-			}
-			
-			trueNegative = test.size() - ( truePositive + falseNegative + falsePositive);
-			
-			a.precision = truePositive / (truePositive + falsePositive);
-			a.recall = truePositive / (truePositive + trueNegative);
-		    a.accuracy = (truePositive + trueNegative) / test.size();
-		    a.fmeasure = 2 * ((a.precision*a.recall )/(a.precision+a.recall) );
-			System.out.println("Authid: "+ i);
-		    System.out.println("Pre recall: "+a.precision +","+a.recall+","+a.accuracy+","+a.fmeasure);
-			result.add(a);
-		
-		}
-		
-		
-		
 		double p = (double) (((double) correct / (double) tot) * 100);
 		// System.out.println("Size: "+analyzer.getTokenSize());
 		// System.out.println("correct: " +p );
-		return result;
+		return p;
 
 	}
 	
-	public Author[] buildReport(IndexBuilder ibx,List<Document> corpus,ScoringSchema score ,Analyzer analyzer,ISimilarity similarity,int foldValidation,int startIndex,int endIndex) throws IOException{
+	public double[] buildReport(IndexBuilder ibx,List<Document> corpus,ScoringSchema score ,Analyzer analyzer,ISimilarity similarity,int foldValidation,int startIndex,int endIndex) throws IOException{
 		double [] accStrore = new double[endIndex];
 		int k=0;
-		Author AvgResult []= new Author[profile.size()];
 		for (int i = startIndex; i < endIndex; i++) {
 			analyzer.setTokenSize(i);
 			double acc = 0.0;
@@ -249,33 +182,20 @@ fw = new FileWriter(FIlePath);
 			
 			
 			for (int j = 0; j < foldValidation; j++) {
-				List<Author> result = ibx.buildIndex(corpus,score, analyzer,	similarity);
-				for (int p=0;p<result.size();p++) {
-					Author a =result.get(i);
-					
-					AvgResult[i].accuracy += a.accuracy;
-					AvgResult[i].precision += a.precision;
-					AvgResult[i].recall += a.recall;
-					
-				}
+				
+				acc += ibx.buildIndex(corpus,score, analyzer,
+						similarity);
 			}
-			for (Author author : AvgResult) {
-				author.accuracy /= foldValidation;
-				author.precision /= foldValidation;
-				author.recall /= foldValidation;
-			}
-			
-			
 			accStrore[k++] = acc / foldValidation;
-		//	System.out.println("acc: " +acc / foldValidation  + " tokSize: "
-		//			+ i);
+			System.out.println("acc: " +acc / foldValidation  + " tokSize: "
+					+ i);
 		}
-       return AvgResult;
+       return accStrore;
 	}
 	
 	
 	
-	void printAccuracy(Author[] charAcc,Author[] tokenAcc) throws IOException{
+	void printAccuracy(double charAcc[],double[] tokenAcc) throws IOException{
 		for(int i=0;i<charAcc.length;i++){
 			String out = (i+1)+","+charAcc[i]+","+tokenAcc[i];
 			System.out.println(out);
@@ -291,11 +211,10 @@ fw = new FileWriter(FIlePath);
 		System.out.println(out);
 		fw.append(out);
 		fw.flush();
-		Author[] charAcc =  ibx.buildReport(ibx, corpus, score, new CharNGramAnalyzer(), similarity, foldValidation, startIndex, endIndex);
-		Author[] tokenAcc = ibx.buildReport(ibx, corpus, score, new TokenNGramAnalyzer(), similarity, foldValidation, startIndex, endIndex);
+		double charAcc [] =  ibx.buildReport(ibx, corpus, score, new CharNGramAnalyzer(), similarity, foldValidation, startIndex, endIndex);
+		double[] tokenAcc = ibx.buildReport(ibx, corpus, score, new TokenNGramAnalyzer(), similarity, foldValidation, startIndex, endIndex);
 		printAccuracy(charAcc, tokenAcc);
 		
-		/*
 		out = "Scoring: raw TF,,";
 		System.out.println(out);
 		fw.append(out);
@@ -315,7 +234,6 @@ fw = new FileWriter(FIlePath);
 		charAcc  = ibx.buildReport(ibx, corpus, score, new CharNGramAnalyzer(), similarity, foldValidation, startIndex, endIndex);
 		tokenAcc = ibx.buildReport(ibx, corpus, score, new TokenNGramAnalyzer(), similarity, foldValidation, startIndex, endIndex);
 		printAccuracy(charAcc, tokenAcc);
-		*/
 	}
 	
 
@@ -328,8 +246,8 @@ fw = new FileWriter(FIlePath);
 		List<Document> corpus = DocumentHelper.getDocs(args[0],
 				authorMapping);
 		int startIndex =1;
-		int endIndex =2;
-		int foldValidation = 1;
+		int endIndex =6;
+		int foldValidation = 10;
 		
 		ISimilarity similarity = new klDivergence();
 		//System.out.println("Similarity Measure: K-L divergance,,");
@@ -339,7 +257,6 @@ fw = new FileWriter(FIlePath);
 		ibx.fw.flush();
 		ibx.buildSimilarity(ibx, corpus, similarity, foldValidation, startIndex, endIndex);
 		
-		/*
 		similarity = new ChiSquare();
 		//System.out.println("Similarity Measure: ChiSquare,,");
 		 out = "Similarity Measure: Chi-Square,,";
