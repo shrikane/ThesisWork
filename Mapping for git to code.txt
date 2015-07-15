@@ -1,0 +1,7 @@
+https://github.com/mwarkentin/Learn-Python-The-Hard-Way python1
+https://github.com/manishc1/Coding/tree/master/C   Auth7
+https://github.com/bhajunsingh/programming-challanges  Auth11
+https://github.com/asimihsan/challenges    Auth2 Java + py
+https://github.com/illuz/leetcode   Auth3 Cpp + py
+https://github.com/derekhh/HackerRank  Auth5 Cpp
+https://github.com/gaylemcd/CtCI-6th-Edition Not_taken java
